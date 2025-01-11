@@ -44,21 +44,25 @@ func Send(host, password, command string) (string, error) {
 		return "", err
 	}
 
+	var buffer []byte
 	response := make([]byte, 2048)
-	n, err := conn.Read(response)
-	if err != nil {
-		return "", err
-	}
-	if n > cap(response) {
-		return "", errors.New("read response over buffer capacity")
-	}
 
-	var size uint16
-	body := bytes.NewBuffer(response)
-	body.Next(11)
-	binary.Read(body, binary.LittleEndian, &size)
-	buffer := make([]byte, size)
-	binary.Read(body, binary.LittleEndian, &buffer)
+	for {
+		n, err := conn.Read(response)
+		if err != nil {
+			return "", err
+		}
+		if n > cap(response) {
+			return "", errors.New("read response over buffer capacity")
+		}
+		if n > 13 {
+			buffer = append(buffer, response[12:n]...)
+		} else {
+			break
+		}
+
+		buffer = append(buffer, '\n')
+	}
 
 	return string(buffer), nil
 }
